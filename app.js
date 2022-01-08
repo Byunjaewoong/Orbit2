@@ -7,8 +7,9 @@ class App {
         document.body.appendChild(this.canvas);
         this.ctx = this.canvas.getContext('2d');
     
-        this.pixelRatio = window.devicePixelRatio > 1 ? 2 : 1;
-    
+        //this.pixelRatio = window.devicePixelRatio > 1 ? 2 : 1;
+        this.pixelRatio = 1; //
+        
         this.sunx = 0;
         this.suny = 0;
         this.spaceRadius = this.canvas.width*2;
