@@ -235,7 +235,7 @@ export class Planet {
         this.spaceY = clientY;
         //this.spaceX = Math.round(Math.random()*(this.stageWidth/2)*Math.cos(radian))+this.stageWidth/2;
         //this.spaceY = Math.round(Math.random()*this.spaceRadius*Math.sin(radian))+this.stageHeight/2;
-        while(Math.abs(Calculate.distancePointToPoint(this.spaceX,this.spaceY,this.spaceZ,this.sunx,this.suny,0))<100){
+        while(Math.abs(Calculate.distancePointToPoint(this.spaceX,this.spaceY,this.spaceZ,this.sunx,this.suny,0))<300){
         this.spaceZ = (this.spaceRadius*1.7)*Math.random()-this.spaceRadius;
         }
 
