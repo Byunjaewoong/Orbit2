@@ -32,7 +32,7 @@ class App {
 
         window.addEventListener("click", (e) => {
             //PlanetGroup에 푸싱
-            let planet = new Planet(this.canvas,e,this.spaceRadius,10,2*Math.PI/2880,this.sunx,this.suny,this.canvas.width,this.canvas.height);
+            let planet = new Planet(this.canvas,e,this.spaceRadius,10,2*Math.PI/5760,this.sunx,this.suny,this.canvas.width,this.canvas.height);
             this.planetGroup.pushing(planet);
         });
 
