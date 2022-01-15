@@ -60,10 +60,16 @@ export class Calculate{
         let xp = tox - sll.x;
         let yp = toy - sll.y;
         let zp = toz - sll.z;
+
+        let length = Math.sqrt((xp*xp+yp*yp+zp*zp));
+        let xp_normal = xp/length;
+        let yp_normal = yp/length;
+        let zp_normal = zp/length;
+
         return{
-            x :xp,
-            y :yp,
-            z :zp
+            x :xp_normal,
+            y :yp_normal,
+            z :zp_normal
         };
     }
 
@@ -118,6 +124,14 @@ export class Calculate{
 
     }
 
+    static perspectiveLength(realLength,massX,massY,massZ,sightPositionX,sightPositionY,sightPositionZ){
+        let windowLength = 0;
+        let distance = this.distancePointToPoint(massX,massY,massZ,sightPositionX,sightPositionY,sightPositionZ);
+        let sightdistance = this.distancePointToPoint(0,0,0,sightPositionX,sightPositionY,sightPositionZ);
+        windowLength = (sightdistance/distance)*realLength;
+
+        return windowLength;
+    }
 }
 
 export class PlanetGroup{
@@ -138,10 +152,13 @@ export class PlanetGroup{
 }
 
 export class Planet {
-    constructor(canvas,event,spaceRadius,planetR,sunx,suny,stageWidth,stageHeight){
+    constructor(canvas,event,spaceRadius,planetR,angleSpeed,sunx,suny,stageWidth,stageHeight){
+
+        //this.angleSpeed = angleSpeed;
+
         this.stageWidth = stageWidth;
         this.stageHeight = stageHeight;
-        this.planetR = planetR;
+        this.planetR = planetR*(Math.random()+0.5);
         this.event = event;
         this.canvas = canvas;
 
@@ -167,7 +184,12 @@ export class Planet {
         
         this.spacePosition(this.event.clientX,this.event.clientY);
 
-        this.windowRadius = (this.spaceRadius*2 + this.spaceZ)/(this.spaceRadius*4)*this.planetR;
+        this.au = Calculate.distancePointToPoint(this.spaceX,this.spaceY,this.spaceZ,this.sunx,this.suny,0)
+
+        this.angleSpeed = angleSpeed*(Math.pow(this.stageHeight,2)/Math.pow(this.au,2))*(this.planetR/planetR);
+
+        //this.windowRadius = (this.spaceRadius*2 + this.spaceZ)/(this.spaceRadius*4)*this.planetR;
+        this.windowRadius = Calculate.perspectiveLength(this.planetR,this.spaceX-this.sunx,this.spaceY-this.suny,this.spaceZ,0,0,this.spaceRadius+500);
 
         this.generatePolar();
         this.colorSet();
@@ -177,14 +199,8 @@ export class Planet {
         this.windowY = this.spaceY;
 
         this.genOrbit();
+        this.counter = 0;
 
-    }
-
-    resize(){
-        this.spaceX = this.canvas.width * this.portionX;
-        this.spaceY = this.canvas.height * this.portionY;
-        this.windowX = this.spaceX;
-        this.windowY = this.spaceY;
     }
 
     generatePolar(){      
@@ -219,9 +235,9 @@ export class Planet {
         this.spaceY = clientY;
         //this.spaceX = Math.round(Math.random()*(this.stageWidth/2)*Math.cos(radian))+this.stageWidth/2;
         //this.spaceY = Math.round(Math.random()*this.spaceRadius*Math.sin(radian))+this.stageHeight/2;
-    
-        //일단은 반달 잘 나오는지 확인하기 위해 고도는 낮게
-        this.spaceZ = (this.spaceRadius*2)*Math.random()-this.spaceRadius;
+        while(Math.abs(Calculate.distancePointToPoint(this.spaceX,this.spaceY,this.spaceZ,this.sunx,this.suny,0))<100){
+        this.spaceZ = (this.spaceRadius*1.7)*Math.random()-this.spaceRadius;
+        }
 
 
     }
@@ -232,8 +248,10 @@ export class Planet {
         this.suny = suny;
         this.shadePolor = Calculate.directionVectorPlanetToSun(this.spaceX,this.spaceY,this.spaceZ,this.windowRadius,this.sunx,this.suny);
 
-        for(var i=(this.windowX-this.windowRadius);i<=(this.windowX+this.windowRadius);i+=2){
-            for(var j=(this.windowY-this.windowRadius);j<=(this.windowY+this.windowRadius);j+=2){
+        this.renderingPixel = 1;
+        
+        for(var i=(this.windowX-this.windowRadius);i<=(this.windowX+this.windowRadius);i+=this.renderingPixel){
+            for(var j=(this.windowY-this.windowRadius);j<=(this.windowY+this.windowRadius);j+=this.renderingPixel){
                 
                 let pos = Math.pow(i-this.windowX,2)+Math.pow(j-this.windowY,2);
                 let circle = Math.pow(this.windowRadius,2);
@@ -321,7 +339,7 @@ export class Planet {
                         this.ctx.arc(
                             i, //* ratio_w,
                             j, //* ratio_h,
-                            2,
+                            this.renderingPixel,
                             0 * 2/8 * Math.PI, 8 * 2/8 * Math.PI
                             );
                         this.ctx.fill();
@@ -366,7 +384,7 @@ export class Planet {
                         this.ctx.arc(
                             i, //* ratio_w,
                             j, //* ratio_h,
-                            2,
+                            this.renderingPixel,
                             0 * 2/8 * Math.PI, 8 * 2/8 * Math.PI
                             );
                         this.ctx.fill();
@@ -377,30 +395,72 @@ export class Planet {
         }
     }
 
+    resize(sunx,suny){
+        this.sunx = sunx;
+        this.suny = suny;
+
+        this.spaceX = this.canvas.width * this.portionX;
+        this.spaceY = this.canvas.height * this.portionY;
+        this.windowX = this.spaceX;
+        this.windowY = this.spaceY;
+
+        this.axisOrbit = Calculate.orthogonalVector((this.spaceX-this.sunx),(this.spaceY-this.suny),this.spaceZ,this.seedVector.x,this.seedVector.y,this.seedVector.z);
+
+        let calx = this.spaceX-this.sunx;
+        let caly = this.spaceY-this.suny;
+
+        this.OrbitStack = [{x:calx,y:caly,z:this.spaceZ}];
+
+        //console.log(this.OrbitStack[0]);
+        //console.log(this.OrbitStack[0].x);
+
+        this.OrbitStep = Math.round(Math.abs(2*Math.PI/this.angleSpeed));
+        //let buffPosition = this.OrbitStack[0];
+        //console.log(OrbitStep);
+        for(var i=0;i<=this.OrbitStep;i++){
+
+            if(i<this.OrbitStep){
+                this.OrbitStack.push(Calculate.axisRotation(this.axisOrbit.x,this.axisOrbit.y,this.axisOrbit.z,(this.OrbitStack[i].x),(this.OrbitStack[i].y),this.OrbitStack[i].z,this.angleSpeed));
+            }
+            this.OrbitStack[i].x = this.OrbitStack[i].x + this.sunx;
+            this.OrbitStack[i].y = this.OrbitStack[i].y + this.suny;
+            //console.log(spaceStep);
+        }
+    }
+
     genOrbit(){
         //임의의 seed vector를 활용하여, 현재 스페이스 공간에 위치한 행성 벡터와 수직인 벡터 ref 를 찾는다 
         //ref벡터를 중심으로 회전 시킨다.
         //this.axisOrbit = { x:0, y:0, z:0 };
 
-        let seedVector = {x:Math.random(),y:Math.random() ,z:Math.random() };
-        /*
-        let sll = { x:0, y:0, z:0 };
+        this.seedVector = {x:Math.random(),y:Math.random() ,z:Math.random() };
 
-        let vv = this.spaceX*this.spaceX + this.spaceY*this.spaceY + this.spaceZ*this.spaceZ;
-        let sv = seedVector.x*this.spaceX + this.seedVector.y*this.spaceY + this.seedVector.z*this.spaceZ;
-        let k = sv/vv;
-
-        sll.x = k*this.spaceX;
-        sll.y = k*this.spaceY;
-        sll.z = k*this.spaceZ;  
-        */
-        this.axisOrbit = Calculate.orthogonalVector((this.spaceX-this.sunx),(this.spaceY-this.suny),this.spaceZ,seedVector.x,seedVector.y,seedVector.z);
-
-        console.log((this.spaceX-this.sunx) +" "+ (this.spaceY-this.suny) +"  "+this.spaceZ);
-
-        console.log(this.axisOrbit);
+        this.axisOrbit = Calculate.orthogonalVector((this.spaceX-this.sunx),(this.spaceY-this.suny),this.spaceZ,this.seedVector.x,this.seedVector.y,this.seedVector.z);
 
         //https://m.blog.naver.com/PostView.naver?isHttpsRedirect=true&blogId=spacebug&logNo=221839553172
+
+        let calx = this.spaceX-this.sunx;
+        let caly = this.spaceY-this.suny;
+
+        this.OrbitStack = [{x:calx,y:caly,z:this.spaceZ}];
+
+        //console.log(this.OrbitStack[0]);
+        //console.log(this.OrbitStack[0].x);
+
+        this.OrbitStep = Math.round(Math.abs(2*Math.PI/this.angleSpeed));
+        //let buffPosition = this.OrbitStack[0];
+        //console.log(OrbitStep);
+        for(var i=0;i<=this.OrbitStep;i++){
+
+            if(i<this.OrbitStep){
+                this.OrbitStack.push(Calculate.axisRotation(this.axisOrbit.x,this.axisOrbit.y,this.axisOrbit.z,(this.OrbitStack[i].x),(this.OrbitStack[i].y),this.OrbitStack[i].z,this.angleSpeed));
+            }
+            this.OrbitStack[i].x = this.OrbitStack[i].x + this.sunx;
+            this.OrbitStack[i].y = this.OrbitStack[i].y + this.suny;
+            //console.log(spaceStep);
+        }
+
+        //console.log(this.OrbitStack[0].x + "    "+ this.OrbitStack[0].y +"    "+ this.OrbitStack[0].z  );
 
     }
 
@@ -408,25 +468,28 @@ export class Planet {
         //this.spaceX = 0;
         //this.spaceY = 0;
         //this.spaceZ = 0;
-        this.angleSpeed = 2*Math.PI/360;
         // 로드리게스 회전 공식
         //https://oksujay1127.tistory.com/75
 
-        this.spaceStep = Calculate.axisRotation(this.axisOrbit.x,this.axisOrbit.y,this.axisOrbit.z,(this.spaceX-this.sunx),(this.spaceY-this.suny),this.spaceZ,this.angleSpeed);
+        //this.spaceStep = Calculate.axisRotation(this.axisOrbit.x,this.axisOrbit.y,this.axisOrbit.z,(this.spaceX-this.sunx),(this.spaceY-this.suny),this.spaceZ,this.angleSpeed);
         //console.log(this.spaceStep);
 
-        this.spaceX = this.spaceStep.x + this.sunx;
-        this.spaceY = this.spaceStep.y + this.suny;
-        this.spaceZ = this.spaceStep.z;
+        if(this.counter==this.OrbitStep){
+            this.counter = 0;
+        }
+        
+        //console.log(this.counter);
+
+        this.spaceX = this.OrbitStack[this.counter].x;
+        this.spaceY = this.OrbitStack[this.counter].y;
+        this.spaceZ = this.OrbitStack[this.counter].z;
         this.windowX = this.spaceX;
         this.windowY = this.spaceY;
-        this.windowRadius = (this.spaceRadius*2 + this.spaceZ)/(this.spaceRadius*4)*this.planetR;
-        //this.polarZ = Math.sqrt(Math.pow(this.windowRadius,2)-Math.pow(this.polarX,2)-Math.pow(this.polarY,2));
+        //this.windowRadius = (this.spaceRadius*2 + this.spaceZ)/(this.spaceRadius*4)*this.planetR;
+        this.windowRadius = Calculate.perspectiveLength(this.planetR,this.spaceX-this.sunx,this.spaceY-this.suny,this.spaceZ,0,0,this.spaceRadius+500);
 
-        //console.log(this.polarZ);
-
-        //console.log(this.spaceX +"    "+ this.spaceY+"     "+this.spaceZ);
-        //console.log(this.spaceX);
+        this.counter = this.counter + 1;
+        console.log(this.spaceX);
 
     }
 

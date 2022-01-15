@@ -8,8 +8,8 @@ class App {
         this.ctx = this.canvas.getContext('2d');
     
         //this.pixelRatio = window.devicePixelRatio > 1 ? 2 : 1;
-        this.pixelRatio = 1; //
-        
+        this.pixelRatio = 1;
+
         this.sunx = 0;
         this.suny = 0;
         this.spaceRadius = this.canvas.width*2;
@@ -32,7 +32,7 @@ class App {
 
         window.addEventListener("click", (e) => {
             //PlanetGroup에 푸싱
-            let planet = new Planet(this.canvas,e,this.spaceRadius,40,this.sunx,this.suny,this.canvas.width,this.canvas.height);
+            let planet = new Planet(this.canvas,e,this.spaceRadius,10,2*Math.PI/2880,this.sunx,this.suny,this.canvas.width,this.canvas.height);
             this.planetGroup.pushing(planet);
         });
 
@@ -56,8 +56,9 @@ class App {
         for(var i=0;i<this.planetGroup.array.length;i++){
             if(this.planetGroup.array[i].genSun){}
             else
-            this.planetGroup.array[i].resize();
+            this.planetGroup.array[i].resize(this.sunx,this.suny);
         }
+        
     }
 
     animate() {
